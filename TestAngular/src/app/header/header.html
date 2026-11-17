@@ -1,1 +1,16 @@
-<div class="contenedor"></div>
+<mat-toolbar>
+  <a class="brand" routerLink="/home">Sistema académico</a>
+  <nav>
+    <a mat-button routerLink="/home" routerLinkActive="active">Inicio</a>
+    <a mat-button routerLink="/dashboardA" routerLinkActive="active">Alumnos</a>
+    <a mat-button routerLink="/dashboardB" routerLinkActive="active">Materias</a>
+    @if (isAdmin) {
+      <a mat-button routerLink="/dashboardC" routerLinkActive="active">Usuarios y roles</a>
+    }
+  </nav>
+  <span class="spacer"></span>
+  @if (currentUser$ | async; as user) {
+    <span class="user-name">{{ user.nombre }} · {{ user.rol }}</span>
+  }
+  <button mat-stroked-button type="button" (click)="logout()">Cerrar sesión</button>
+</mat-toolbar>

@@ -1,9 +1,40 @@
-.contenedor{
+mat-toolbar {
+  gap: 12px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
 
-    height: 100px;
+.brand {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+nav {
+  display: flex;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.user-name {
+  font-size: 14px;
+}
+
+.active {
+  background: var(--mat-sys-secondary-container);
+}
+
+@media (max-width: 760px) {
+  mat-toolbar {
+    height: auto;
+    flex-wrap: wrap;
+    padding-block: 8px;
+  }
+
+  nav {
+    order: 3;
     width: 100%;
-
-
-    background-color: lightcoral;
-
+    overflow-x: auto;
+  }
 }

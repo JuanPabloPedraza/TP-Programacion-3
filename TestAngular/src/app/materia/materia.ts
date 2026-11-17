@@ -1,112 +1,130 @@
 import { Component, OnInit } from '@angular/core';
-import { MateriaService } from '../services/materia-service';
-import { Materias } from '../interfaces/Materias';
-import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
-import { MatDialog } from '@angular/material/dialog';
-import { DialogAgregarMateria } from '../dialog-agregar-materia/dialog-agregar-materia';
 import Swal from 'sweetalert2';
+import { AuthService } from '../auth/auth.service';
+import { DialogAgregarMateria } from '../dialog-agregar-materia/dialog-agregar-materia';
+import { Materias } from '../interfaces/Materias';
+import { MateriaService } from '../services/materia-service';
 
 @Component({
   selector: 'app-materia',
   standalone: true,
-
   imports: [
-
-    CommonModule,
-    MatTableModule
-
+    FormsModule,
+    MatTableModule,
+    MatButtonModule,
+    MatDialogModule,
+    MatPaginatorModule,
+    MatFormFieldModule,
+    MatInputModule
   ],
-
   templateUrl: './materia.html',
   styleUrl: './materia.scss',
 })
 export class Materia implements OnInit {
-
-  materia: Materias[] = [];
-  displayedColumns: string[] = ['id', 'nombre', 'acciones'];
+  materias: Materias[] = [];
+  displayedColumns = ['id', 'nombre', 'cantidadAlumnos'];
+  pageIndex = 0;
+  pageSize = 5;
+  totalCount = 0;
+  search = '';
+  readonly canManage: boolean;
+  readonly canDelete: boolean;
 
   constructor(
-
-    //ACA DELCARAMOS EL SERVICIO PARA PODER UTILIZARLO EN LOS MÉTODOS
-
-    private materiaService: MateriaService,
-    private dialog: MatDialog
-
+    private readonly materiaService: MateriaService,
+    private readonly dialog: MatDialog,
+    private readonly authService: AuthService
   ) {
-
+    this.canManage = this.authService.hasRole('Administrador', 'Profesor');
+    this.canDelete = this.authService.hasRole('Administrador');
+    if (this.canManage) this.displayedColumns.push('acciones');
   }
 
   ngOnInit(): void {
-        
-    //ACÁ INICIALIZAMOS EL MÉTODO, Y SIRVE PARA CARGAR LA TABLITA
     this.cargarMaterias();
-
   }
 
-  cargarMaterias() {
-
-    this.materiaService.getAll().subscribe({
-
-      next: (data) => this.materia = data,
-
-      error: (err) => {
-        console.error('err', err)
+  cargarMaterias(): void {
+    this.materiaService.getPaged(this.pageIndex + 1, this.pageSize, this.search).subscribe({
+      next: response => {
+        this.materias = response.items;
+        this.totalCount = response.totalCount;
       },
-
-    })
-
+      error: error => Swal.fire('Error', this.errorMessage(error, 'No se pudieron cargar las materias.'), 'error')
+    });
   }
 
-  agregarMateria() {
+  buscar(): void {
+    this.pageIndex = 0;
+    this.cargarMaterias();
+  }
 
+  cambiarPagina(event: PageEvent): void {
+    this.pageIndex = event.pageIndex;
+    this.pageSize = event.pageSize;
+    this.cargarMaterias();
+  }
+
+  agregarMateria(): void {
     const dialogRef = this.dialog.open(DialogAgregarMateria, {
-      data: {}
+      data: { nombresExistentes: this.materias.map(item => item.nombre) }
     });
-
     dialogRef.afterClosed().subscribe(result => {
-
-      if (!result)
-        return;
-
+      if (!result) return;
       this.materiaService.CrearMateria(result).subscribe({
-
         next: () => {
-
-          //EL CASO DE EXITO, ES EL NEXT
-
-          // Swal.fire('Listo', 'Materia agregado correctamente.', 'success');
-
-          console.log('Materia agregada correctamente')
-
+          void Swal.fire('Listo', 'Materia agregada correctamente.', 'success');
           this.cargarMaterias();
-
         },
-
-        
-
-        error: () => Swal.fire('Error', 'No se pudo agregar la materia.', 'error')
-
-        //EL CASO DE ERROR ES CUANDO FALLA
-
+        error: error => Swal.fire('Error', this.errorMessage(error, 'No se pudo agregar la materia.'), 'error')
       });
     });
-
-    return console.log('Con este boton vamos a crear la materia, el backend ya tiene ese endpoint funcionando correctamente')
-
   }
 
-
-  eliminar(materia: Materia) {
-
-    return console.log('Con este boton se elimina la materia // OJO de hacer funcionar el getbyId del backend')
-
+  editarMateria(materia: Materias): void {
+    const dialogRef = this.dialog.open(DialogAgregarMateria, {
+      data: { materia, nombresExistentes: this.materias.map(item => item.nombre) }
+    });
+    dialogRef.afterClosed().subscribe(result => {
+      if (!result) return;
+      this.materiaService.updateMateria(materia.id, { nombre: result.nombre }).subscribe({
+        next: () => {
+          void Swal.fire('Listo', 'Materia actualizada correctamente.', 'success');
+          this.cargarMaterias();
+        },
+        error: error => Swal.fire('Error', this.errorMessage(error, 'No se pudo actualizar la materia.'), 'error')
+      });
+    });
   }
 
-  editarMateria(materia: Materia) {
-
-    return console.log('Con este boton se edita la materia')
-
+  eliminar(materia: Materias): void {
+    Swal.fire({
+      title: '¿Eliminar materia?',
+      text: `Se eliminará ${materia.nombre}.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.materiaService.deleteMateria(materia.id).subscribe({
+        next: () => {
+          void Swal.fire('Eliminado', 'La materia se eliminó correctamente.', 'success');
+          this.cargarMaterias();
+        },
+        error: error => Swal.fire('Error', this.errorMessage(error, 'No se pudo eliminar la materia.'), 'error')
+      });
+    });
   }
 
+  private errorMessage(error: any, fallback: string): string {
+    return error?.error?.detail ?? error?.error?.title ?? fallback;
+  }
 }

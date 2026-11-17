@@ -1,100 +1,108 @@
 import { Component, OnInit } from '@angular/core';
-import { MatTableModule } from '@angular/material/table';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatTableModule } from '@angular/material/table';
+import Swal from 'sweetalert2';
+import { AuthService } from '../auth/auth.service';
+import { AlumnoDialogComponent } from '../dialog-agregar-alumno/dialog-agregar-alumno';
 import { Alumno } from '../interfaces/Alumno';
 import { alumnosService } from '../services/AlumnoService';
-import Swal from 'sweetalert2';
-import { AlumnoDialogComponent } from '../dialog-agregar-alumno/dialog-agregar-alumno';
 
 @Component({
   selector: 'app-alumnos',
   standalone: true,
   imports: [
-
+    FormsModule,
     MatTableModule,
     MatButtonModule,
     MatIconModule,
-    MatDialogModule
+    MatDialogModule,
+    MatPaginatorModule,
+    MatFormFieldModule,
+    MatInputModule
   ],
   templateUrl: './alumnos.html',
   styleUrl: './alumnos.scss',
 })
 export class AlumnosComponent implements OnInit {
-
   alumnos: Alumno[] = [];
-  displayedColumns: string[] = ['id', 'nombre', 'email', 'materia', 'acciones'];
+  displayedColumns: string[] = ['id', 'nombre', 'email', 'materia'];
+  pageIndex = 0;
+  pageSize = 5;
+  totalCount = 0;
+  search = '';
+  readonly canManage: boolean;
+  readonly canDelete: boolean;
 
   constructor(
-    private alumnosService: alumnosService,
-    private dialog: MatDialog
-  ) { }
+    private readonly alumnosService: alumnosService,
+    private readonly dialog: MatDialog,
+    private readonly authService: AuthService
+  ) {
+    this.canManage = this.authService.hasRole('Administrador', 'Profesor');
+    this.canDelete = this.authService.hasRole('Administrador');
+    if (this.canManage) this.displayedColumns.push('acciones');
+  }
 
   ngOnInit(): void {
     this.cargarAlumnos();
   }
 
-  cargarAlumnos() {
-    this.alumnosService.getAll().subscribe({
-
-      next: (data) => this.alumnos = data,
-
-      error: (err) => {
-        console.error('Error al traer alumnos', err);
-        Swal.fire('Error', 'No se pudieron cargar los alumnos porque se cayo el servidor.', 'error');
+  cargarAlumnos(): void {
+    this.alumnosService.getPaged(this.pageIndex + 1, this.pageSize, this.search).subscribe({
+      next: response => {
+        this.alumnos = response.items;
+        this.totalCount = response.totalCount;
       },
-
+      error: error => Swal.fire('Error', this.errorMessage(error, 'No se pudieron cargar los alumnos.'), 'error')
     });
   }
 
-  agregarAlumno() {
-
-    const dialogRef = this.dialog.open(AlumnoDialogComponent, {
-      data: {}
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (!result)
-        return;
-
-      this.alumnosService.create(result).subscribe({
-
-        next: () => {
-          Swal.fire('Listo', 'Alumno agregado correctamente.', 'success');
-          this.cargarAlumnos();
-        },
-
-        error: () => Swal.fire('Error', 'No se pudo agregar el alumno.', 'error')
-
-      });
-    });
-
+  buscar(): void {
+    this.pageIndex = 0;
+    this.cargarAlumnos();
   }
 
-  editarAlumno(alumno: Alumno) {
+  cambiarPagina(event: PageEvent): void {
+    this.pageIndex = event.pageIndex;
+    this.pageSize = event.pageSize;
+    this.cargarAlumnos();
+  }
 
-    const dialogRef = this.dialog.open(AlumnoDialogComponent, {
-      data: { alumno }
-    });
-
+  agregarAlumno(): void {
+    const dialogRef = this.dialog.open(AlumnoDialogComponent, { data: {} });
     dialogRef.afterClosed().subscribe(result => {
       if (!result) return;
-
-      this.alumnosService.update(alumno.id, result).subscribe({
+      this.alumnosService.create(result).subscribe({
         next: () => {
-
-          Swal.fire('Guardado', 'Alumno actualizado correctamente.', 'success');
+          void Swal.fire('Listo', 'Alumno agregado correctamente.', 'success');
           this.cargarAlumnos();
-
         },
-        error: () => Swal.fire('Error', 'No se pudo actualizar el alumno.', 'error')
+        error: error => Swal.fire('Error', this.errorMessage(error, 'No se pudo agregar el alumno.'), 'error')
       });
     });
-
   }
 
-  eliminar(alumno: Alumno) {
+  editarAlumno(alumno: Alumno): void {
+    const dialogRef = this.dialog.open(AlumnoDialogComponent, { data: { alumno } });
+    dialogRef.afterClosed().subscribe(result => {
+      if (!result) return;
+      this.alumnosService.update(alumno.id, result).subscribe({
+        next: () => {
+          void Swal.fire('Guardado', 'Alumno actualizado correctamente.', 'success');
+          this.cargarAlumnos();
+        },
+        error: error => Swal.fire('Error', this.errorMessage(error, 'No se pudo actualizar el alumno.'), 'error')
+      });
+    });
+  }
+
+  eliminar(alumno: Alumno): void {
     Swal.fire({
       title: '¿Eliminar alumno?',
       text: `Vas a eliminar a ${alumno.nombre}. Esta acción no se puede deshacer.`,
@@ -105,14 +113,17 @@ export class AlumnosComponent implements OnInit {
       cancelButtonText: 'Cancelar'
     }).then(result => {
       if (!result.isConfirmed) return;
-
       this.alumnosService.delete(alumno.id).subscribe({
         next: () => {
-          Swal.fire('Eliminado', 'El alumno fue eliminado.', 'success');
+          void Swal.fire('Eliminado', 'El alumno fue eliminado.', 'success');
           this.cargarAlumnos();
         },
-        error: () => Swal.fire('Error', 'No se pudo eliminar el alumno.', 'error')
+        error: error => Swal.fire('Error', this.errorMessage(error, 'No se pudo eliminar el alumno.'), 'error')
       });
     });
+  }
+
+  private errorMessage(error: any, fallback: string): string {
+    return error?.error?.detail ?? error?.error?.title ?? fallback;
   }
 }

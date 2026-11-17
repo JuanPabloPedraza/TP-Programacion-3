@@ -94,6 +94,7 @@ export class AlumnoDialogComponent implements OnInit {
     if (data.alumno) {
       this.nombre    = data.alumno.nombre;      
       this.email = data.alumno.email;
+      this.materiaId = data.alumno.materiaId;
   
     }
   }

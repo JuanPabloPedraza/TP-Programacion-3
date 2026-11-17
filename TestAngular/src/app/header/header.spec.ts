@@ -1,14 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Header } from './header';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
 
 describe('Header', () => {
   let component: Header;
   let fixture: ComponentFixture<Header>;
 
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
-      imports: [Header]
+      imports: [Header],
+      providers: [provideRouter([]), provideHttpClient()]
     })
     .compileComponents();
 

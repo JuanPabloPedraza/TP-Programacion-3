@@ -1,9 +1,11 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { Alumno } from '../interfaces/Alumno';
 import { CrearAlumnoDto } from '../interfaces/CrearAlumnoDto';
+import { PagedResult } from '../interfaces/PagedResult';
 
 
 @Injectable({
@@ -23,10 +25,16 @@ export class alumnosService {
   ) { }
 
 
+  getPaged(pageNumber: number, pageSize: number, search: string): Observable<PagedResult<Alumno>> {
+    const params = new HttpParams()
+      .set('pageNumber', pageNumber)
+      .set('pageSize', pageSize)
+      .set('search', search.trim());
+    return this.http.get<PagedResult<Alumno>>(this.ApiUrl, { params });
+  }
+
   getAll(): Observable<Alumno[]> {
-
-    return this.http.get<Alumno[]>(this.ApiUrl);
-
+    return this.getPaged(1, 100, '').pipe(map(response => response.items));
   }
 
 

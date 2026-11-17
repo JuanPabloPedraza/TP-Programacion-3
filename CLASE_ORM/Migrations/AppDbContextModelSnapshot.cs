@@ -31,14 +31,16 @@ namespace CLASE_ORM.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<int>("MateriaId")
                         .HasColumnType("int");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
@@ -57,9 +59,13 @@ namespace CLASE_ORM.Migrations
 
                     b.Property<string>("Nombre")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(25)
+                        .HasColumnType("nvarchar(25)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
 
                     b.ToTable("Materias");
                 });
@@ -74,11 +80,50 @@ namespace CLASE_ORM.Migrations
 
                     b.Property<string>("Nombre")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
                     b.ToTable("Profesores");
+                });
+
+            modelBuilder.Entity("CLASE_ORM.Entities.Usuario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Rol")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Alumno");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Usuarios");
                 });
 
             modelBuilder.Entity("CLASE_ORM.Entities.Alumno", b =>
@@ -86,7 +131,7 @@ namespace CLASE_ORM.Migrations
                     b.HasOne("CLASE_ORM.Entities.Materia", "Materia")
                         .WithMany("Alumnos")
                         .HasForeignKey("MateriaId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Materia");

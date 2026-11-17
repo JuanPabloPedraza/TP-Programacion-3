@@ -1,5 +1,17 @@
-<p>dashboard-b works!</p>
-<button routerLink="/home">Home</button>
+<section class="dashboard-shell">
+  <header class="dashboard-header">
+    <div>
+      <p class="eyebrow">Gestion academica</p>
+      <h1>Panel de materias</h1>
+      <p class="subtitle">Volve al inicio o administra el listado desde este espacio.</p>
+    </div>
 
+    <button class="home-button" routerLink="/home">
+      Home
+    </button>
+  </header>
 
-<app-materia></app-materia>
+  <div class="dashboard-card">
+    <app-materia></app-materia>
+  </div>
+</section>
